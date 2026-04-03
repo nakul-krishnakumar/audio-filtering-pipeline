@@ -1,37 +1,41 @@
 from torch.utils.data import IterableDataset, get_worker_info
+import ast
+import torch
 import torchaudio
+import soundfile as sf
 import json
+from typing import Any
 from pydantic import BaseModel
 
 from .logger import Logger
 
 class VerificationReport(BaseModel):
-	decision: str
-	low_volume: bool
-	noise_intermittent: bool
-	chatter_intermittent: bool
-	noise_persistent: bool
-	chatter_persistent: bool
-	unclear_audio: bool
-	off_topi: bool
-	repeating_content: bool
-	long_pause: bool
-	mispronunciation: bool
-	reading_promp: bool
-	book_read: bool
-	sst: bool
-	stretchin: bool
-	bad_extempore_quality: bool
-	comments: str
-	objectionable_content: bool
-	skipping_word: bool
-	incorrect_text_prompt: bool
-	factual_inaccuracy: bool
+	decision: str = ""
+	low_volume: bool = False
+	noise_intermittent: bool = False
+	chatter_intermittent: bool = False
+	noise_persistent: bool = False
+	chatter_persistent: bool = False
+	unclear_audio: bool = False
+	off_topic: bool = False
+	repeating_content: bool = False
+	long_pauses: bool = False
+	mispronunciation: bool = False
+	reading_prompt: bool = False
+	book_read: bool = False
+	sst: bool = False
+	stretching: bool = False
+	bad_extempore_quality: bool = False
+	comments: str = ""
+	objectionable_content: bool = False
+	skipping_words: bool = False
+	incorrect_text_prompt: bool = False
+	factual_inaccuracy: bool = False
 
 class AudioSample(BaseModel):
 	audio_filepath: str
-	audio: any
-	sr: any
+	audio: Any
+	sr: Any
 	text: str
 	duration: float
 	lang: str
@@ -54,11 +58,10 @@ class AudioSample(BaseModel):
 	unsanitized_normalized: str
 
 class StreamingAudioDataset(IterableDataset):
-	def __init__(self, logger: Logger, manifest_path: str, target_sr: int = 16000, max_samples: int = None):
+	def __init__(self, logger: Logger, manifest_path: str, target_sr: int = 16000):
 		self.logger = logger
 		self.manifest_path = manifest_path
 		self.target_sr = target_sr
-		self.max_samples = max_samples
 
 	def _line_iterator(self):
 		worker_info = get_worker_info()
@@ -81,17 +84,23 @@ class StreamingAudioDataset(IterableDataset):
 		"""
 		return waveform.mean(dim=0, keepdim=True)
 
+	def _load_waveform(self, path: str):
+		audio, sr = sf.read(path, always_2d=True)
+		waveform = torch.from_numpy(audio).float().transpose(0, 1)
+		return waveform, sr
+
 	def _resample(self, waveform, sr):
 		"""
 		Resample audio waveform to expected target sample rate
 		"""
+		self.logger.warn(f"Audio SR: {sr} | Expected SR: {self.target_sr} | Converting...")
 		waveform = torchaudio.functional.resample(
 						waveform, sr, self.target_sr
 					)
 		return waveform, self.target_sr
 
 	def _generate_audio_sample(self, item, waveform, sr) -> AudioSample:
-		vr = item.get("verification_report", {})
+		vr = self._parse_verification_report(item.get("verification_report", {}))
 		verification_report = VerificationReport(**vr)
 
 		return AudioSample(
@@ -120,16 +129,38 @@ class StreamingAudioDataset(IterableDataset):
 			unsanitized_normalized=item.get("unsanitized_normalized", ""),
 		)
 
+	def _parse_verification_report(self, raw_vr: Any) -> dict[str, Any]:
+		"""Parse verification_report from dict or serialized string formats."""
+		if isinstance(raw_vr, dict):
+			return raw_vr
+
+		if isinstance(raw_vr, str):
+			text = raw_vr.strip()
+			if not text:
+				return {}
+
+			try:
+				parsed = json.loads(text)
+				if isinstance(parsed, dict):
+					return parsed
+			except Exception:
+				pass
+
+			# Dataset stores python-dict-like strings with single quotes.
+			try:
+				parsed = ast.literal_eval(text)
+				if isinstance(parsed, dict):
+					return parsed
+			except Exception:
+				self.logger.warn(f"Could not parse verification_report: {text[:120]}...")
+
+		return {}
 
 	def __iter__(self):
-		count = 0
-
 		for line in self._line_iterator():
-			if self.max_samples is not None and count >= self.max_samples:
-				break
 			try:
 				item = json.loads(line)
-				waveform, sr = torchaudio.load(item["audio_filepath"])
+				waveform, sr = self._load_waveform(item["audio_filepath"])
 
 				if waveform.shape[0] > 1:
 					waveform = self._convert_to_mono(waveform)
@@ -140,8 +171,6 @@ class StreamingAudioDataset(IterableDataset):
 				sample = self._generate_audio_sample(item, waveform, sr)
 				yield sample
 
-				count += 1
-
 			except Exception as e:
-				self.logger.warn(e)				
+				self.logger.warn(str(e))
 				continue
