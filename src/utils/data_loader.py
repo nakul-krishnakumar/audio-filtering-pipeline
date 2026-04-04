@@ -9,29 +9,6 @@ from pydantic import BaseModel
 
 from .logger import Logger
 
-# class VerificationReport(BaseModel):
-# 	decision: str = ""
-# 	low_volume: bool = False
-# 	noise_intermittent: bool = False
-# 	chatter_intermittent: bool = False
-# 	noise_persistent: bool = False
-# 	chatter_persistent: bool = False
-# 	unclear_audio: bool = False
-# 	off_topic: bool = False
-# 	repeating_content: bool = False
-# 	long_pauses: bool = False
-# 	mispronunciation: bool = False
-# 	reading_prompt: bool = False
-# 	book_read: bool = False
-# 	sst: bool = False
-# 	stretching: bool = False
-# 	bad_extempore_quality: bool = False
-# 	comments: str = ""
-# 	objectionable_content: bool = False
-# 	skipping_words: bool = False
-# 	incorrect_text_prompt: bool = False
-# 	factual_inaccuracy: bool = False
-
 class AudioSample(BaseModel):
 	audio_filepath: str
 	audio: Any
@@ -39,32 +16,6 @@ class AudioSample(BaseModel):
 	text: str
 	duration: float
 	lang: str
-	task_name: str
-
-# class AudioSample(BaseModel):
-# 	audio_filepath: str
-# 	audio: Any
-# 	sr: Any
-# 	text: str
-# 	duration: float
-# 	lang: str
-# 	samples: int
-# 	verbatim: str
-# 	normalized: str
-# 	speaker_id: str
-# 	scenario: str
-# 	task_name: str
-# 	gender: str
-# 	age_group: str
-# 	job_type: str
-# 	qualification: str
-# 	area: str
-# 	district: str
-# 	state: str
-# 	occupation: str
-# 	verification_report: VerificationReport
-# 	unsanitized_verbatim: str
-# 	unsanitized_normalized: str
 
 class StreamingAudioDataset(IterableDataset):
 	def __init__(self, logger: Logger, manifest_path: str, target_sr: int = 16000):
@@ -128,7 +79,6 @@ class StreamingAudioDataset(IterableDataset):
 			text=item.get("text", ""),
 			duration=item.get("duration", 0.0),
 			lang=item.get("lang", ""),
-			task_name=item.get("task_name", ""),
 		)
 
 	def __iter__(self):

@@ -1,9 +1,15 @@
 {
-	"min_duration": 0.2,
-	"max_duration": 30.0,
-	"min_c50": 30.0,
-	"min_snr": 25.0,
-	"min_silence_ratio": 0.50,
-	"min_vad_ratio": 0.40,
-	"min_asr_conf": 0.35
+    "min_duration": 0.2,
+    "max_duration": 30.0,
+    "min_c50": 30.0,
+    "min_snr": 25.0,
+    "max_silence_ratio": 0.5,
+    "min_vad_ratio": 0.4,
+    "min_asr_conf": 0.35,
+    "max_clipping_ratio": 0.01,
+    "min_mos": 3.0,
+    "min_noisiness": 2.5,
+    "min_discontinuity": 2.2,
+    "min_coloration": 2.5,
+    "min_loudness": 2.5
 }

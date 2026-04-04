@@ -4,7 +4,7 @@ from .filterer import HardFilterActor, soft_filter_task
 from torch.utils.data import DataLoader
 import json
 import os
-import sys
+import time
 import ray
 from typing import Optional
 
@@ -18,19 +18,6 @@ def _resolve_hf_token() -> Optional[str]:
 
 def collate_fn(batch):
     return batch
-
-
-def _build_ray_init_kwargs() -> dict:
-	# Force workers to use the already-active interpreter instead of spawning a
-	# fresh uv-managed env under /tmp, which can exceed disk quotas.
-	temp_dir = os.getenv("RAY_TEMP_DIR", os.path.expanduser("~/.ray_tmp"))
-	os.makedirs(temp_dir, exist_ok=True)
-
-	return {
-		"ignore_reinit_error": True,
-		"_temp_dir": temp_dir,
-		"runtime_env": {"py_executable": sys.executable},
-	}
 
 def run_pipeline(
 		manifest_path: str = "./data/manifests/test_manifest.jsonl",
@@ -83,7 +70,7 @@ def run_pipeline(
 	try:
 		with open(output_file, "w", encoding="utf-8") as output_f:
 			for idx, batch in enumerate(dataIterator):
-				logger.info(f"Batch processing start for batch {idx+1}")
+				start = time.time()
 				soft_futures = [soft_filter_task.remote(sample) for sample in batch]
 
 				soft_outputs = [s for s in ray.get(soft_futures) if s is not None]
@@ -104,14 +91,24 @@ def run_pipeline(
 
 				for soft_result, hard_result in zip(soft_results, hard_results):
 					result = {**soft_result, **hard_result}
+					
+					pass_nisqa = sum([
+						result["mos"] >= cfg["min_mos"],
+						result["noisiness"] >= cfg["min_noisiness"],
+						result["discontinuity"] >= cfg["min_discontinuity"],
+						result["coloration"] >= cfg["min_coloration"],
+						result["loudness"] >= cfg["min_loudness"],
+					]) >= 4
 
 					if (
 						cfg["min_duration"] < result["duration"] < cfg["max_duration"] and
 						result["c50"] >= cfg["min_c50"] and
 						result["snr"] >= cfg["min_snr"] and
-						result["silence_ratio"] <= cfg["min_silence_ratio"] and
+						result["silence_ratio"] <= cfg["max_silence_ratio"] and
+						result["clipping_ratio"] < cfg["max_clipping_ratio"] and
 						result["vad_ratio"] >= cfg["min_vad_ratio"] and
-						result["asr"] >= cfg["min_asr_conf"]
+						result["asr"] >= cfg["min_asr_conf"] and
+						pass_nisqa
 					):
 						result["status"] = "Accept"
 					else:
@@ -119,7 +116,8 @@ def run_pipeline(
 
 					output_f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
-				logger.info(f"soft_count={len(soft_results)} | hard_count={len(hard_results)}")
+				end = time.time()
+				logger.info(f"Batch {idx+1} processed in {end - start} seconds")
 
 		return
 	finally:
