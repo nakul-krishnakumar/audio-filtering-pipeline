@@ -55,7 +55,6 @@ class Logger:
 			level_right_pad=level_right_pad,
 		)
 
-		# Avoid adding duplicate handlers when Logger() is initialized repeatedly.
 		if not self.logger.handlers:
 			self.handler = logging.StreamHandler()
 			self.handler.setFormatter(self.formatter)
@@ -64,18 +63,18 @@ class Logger:
 			for handler in self.logger.handlers:
 				handler.setFormatter(self.formatter)
 
-	def debug(self, msg: str):
-		self.logger.debug(msg)
+	def debug(self, msg: str, *args, **kwargs):
+		self.logger.debug(msg, *args, **kwargs)
 
-	def info(self, msg: str):
-		self.logger.info(msg)
+	def info(self, msg: str, *args, **kwargs):
+		self.logger.info(msg, *args, **kwargs)
 
-	def warn(self, msg: str):
-		self.logger.warning(msg)
+	def warn(self, msg: str, *args, **kwargs):
+		self.logger.warning(msg, *args, **kwargs)
 
-	def error(self, msg: str):
-		self.logger.error(msg)
+	def error(self, msg: str, *args, **kwargs):
+		self.logger.error(msg, *args, **kwargs)
 	
-	def critical(self, msg: str):
-		self.logger.critical(msg)
+	def critical(self, msg: str, *args, **kwargs):
+		self.logger.critical(msg, *args, **kwargs)
 	

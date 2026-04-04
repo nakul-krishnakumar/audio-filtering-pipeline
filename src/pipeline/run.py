@@ -9,6 +9,7 @@ import ray
 
 from huggingface_hub import get_token as hf_get_token
 
+# Set of unsupported languages by whisper to do ASR and LID
 UNSUPPORTED_LANGS = [
 	"brx", #bodo
 	"doi", #dogri
@@ -41,7 +42,7 @@ def run_pipeline(
 
 	if debug_workers:
 		cluster = ray.cluster_resources()
-		logger.info(f"Ray cluster resources: {cluster}")
+		logger.info("Ray cluster resources: %s", cluster)
 
 	hf_token = os.getenv("HF_TOKEN") or hf_get_token()
 	if hf_token:
@@ -51,7 +52,7 @@ def run_pipeline(
 
 	os.makedirs(output_dir, exist_ok=True)
 	output_file = os.path.join(output_dir, "filtered_manifest.jsonl")
-	logger.info(f"Writing filtered output to: {output_file}")
+	logger.info("Writing filtered output to: %s", output_file)
 
 	dataset = StreamingAudioDataset(
 		logger=logger,
@@ -72,7 +73,7 @@ def run_pipeline(
 	#!TODO: Remove before submission
 	if debug_workers:
 		hard_identity = ray.get(hard_filter_actor.get_identity.remote())
-		logger.info(f"Hard actor identity: {hard_identity}")
+		logger.info("Hard actor identity: %s", hard_identity)
 
 	try:
 		with open(output_file, "w", encoding="utf-8") as output_f:
@@ -89,7 +90,7 @@ def run_pipeline(
 				#!TODO: Remove before submission
 				if debug_workers:
 					soft_pids = sorted({int(item["_ray"]["pid"]) for item in soft_outputs if "_ray" in item})
-					logger.info(f"Soft workers used this batch: count={len(soft_pids)} pids={soft_pids}")
+					logger.info("Soft workers used this batch: count=%d pids=%s", len(soft_pids), soft_pids)
 
 				if not soft_outputs:
 					continue
@@ -154,21 +155,21 @@ def run_pipeline(
 					output_f.write(json.dumps(result, ensure_ascii=False) + "\n")
 				
 				end = time.time()
-				logger.info(f"Batch {idx+1} processed in {end - start} seconds")
-			logger.info(f"{'='*10} Final Report {'='*60}")
-			logger.info(f"Total time taken: {end - init_time} (Including around 15 seconds of ray initialization time)")
-			logger.info(f"Total Samples: {total_accepts + total_rejects}")
-			logger.info(f"Total Rejects: {total_rejects}")
-			logger.info(f"Total Accepts: {total_accepts}")
-			logger.info(f"Rejected due to Duration: {rejects_due_to[0]}")
-			logger.info(f"Rejected due to C50: {rejects_due_to[1]}")
-			logger.info(f"Rejected due to Signal-to-Noise Ratio: {rejects_due_to[2]}")
-			logger.info(f"Rejected due to Silence Ratio: {rejects_due_to[3]}")
-			logger.info(f"Rejected due to Clipping Ratio: {rejects_due_to[4]}")
-			logger.info(f"Rejected due to VAD Ratio: {rejects_due_to[5]}")
-			logger.info(f"Rejected due to ASR Confidence: {rejects_due_to[6]}")
-			logger.info(f"Rejected due to Unidentified Language: {rejects_due_to[7]}")
-			logger.info(f"Rejected due to NISQA Metrics: {rejects_due_to[8]}")
+				logger.info("Batch %d processed in %.3f seconds", idx + 1, end - start)
+			logger.info("%s Final Report %s", '='*10, '='*10)
+			logger.info("Total time taken: %.3f (Including around 15 seconds of ray initialization time)", end - init_time)
+			logger.info("Total Samples: %d", total_accepts + total_rejects)
+			logger.info("Total Rejects: %d", total_rejects)
+			logger.info("Total Accepts: %d", total_accepts)
+			logger.info("Rejected due to Duration: %d", rejects_due_to[0])
+			logger.info("Rejected due to C50: %d", rejects_due_to[1])
+			logger.info("Rejected due to Signal-to-Noise Ratio: %d", rejects_due_to[2])
+			logger.info("Rejected due to Silence Ratio: %d", rejects_due_to[3])
+			logger.info("Rejected due to Clipping Ratio: %d", rejects_due_to[4])
+			logger.info("Rejected due to VAD Ratio: %d", rejects_due_to[5])
+			logger.info("Rejected due to ASR Confidence: %d", rejects_due_to[6])
+			logger.info("Rejected due to Unidentified Language: %d", rejects_due_to[7])
+			logger.info("Rejected due to NISQA Metrics: %d", rejects_due_to[8])
 			logger.debug("Note that a sample can be rejected due to one or more reasons!")
 			logger.info('='*85)
 			logger.debug(cfg)

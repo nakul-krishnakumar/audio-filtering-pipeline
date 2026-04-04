@@ -52,7 +52,7 @@ class AudioFilterer:
 
 		self.brouhaha_inference: Optional[Inference] = None
 		if use_hard_filters:
-			self.logger.debug(f"Using device: {self.device}")
+			self.logger.debug("Using device: %s", self.device)
 
 			if hf_token:
 				model = Model.from_pretrained(
