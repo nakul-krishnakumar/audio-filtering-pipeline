@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import Any, Optional
-import os
 
-import numpy as np
+import os
 import ray
 import torch
+import json
 import whisper
+import numpy as np
 from pyannote.audio import Inference, Model
 from torchmetrics.audio import NonIntrusiveSpeechQualityAssessment
 from transformers.utils import logging
@@ -14,6 +15,10 @@ from ..utils.logger import Logger
 from ..utils.data_loader import AudioSample
 
 logging.set_verbosity_info()
+
+with open("hyper_params.json", "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+
 
 def _runtime_identity() -> dict[str, str | int]:
 	ctx = ray.get_runtime_context()
@@ -36,13 +41,8 @@ class AudioFilterer:
 		device: Optional[str | torch.device] = None,
 		use_hard_filters: bool = False,
 	):	
-		self.config = {}
-		self.config["frame_length"] = 1024
-		self.config["clip_threshold"] = 0.98
-		self.config["silence_threshold_db"] = -40.0
-		self.config["frame_length"] = 1024
-		self.config["vad_threshold"] = 0.5
-		self.config["max_snr_db"] = 60.0
+		
+		self.config = cfg # hyperparameters
 
 		self.logger = logger
 		if device is None:

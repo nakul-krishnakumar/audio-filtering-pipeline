@@ -1,0 +1,6 @@
+{
+	"frame_length": 1024,
+	"clip_threshold": 0.98,
+	"silence_threshold_db": -40.0,
+	"vad_threshold": 0.5
+}

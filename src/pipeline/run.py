@@ -70,7 +70,6 @@ def run_pipeline(
 
 	hard_filter_actor = HardFilterActor.remote(hf_token=hf_token)
 
-	#!TODO: Remove before submission
 	if debug_workers:
 		hard_identity = ray.get(hard_filter_actor.get_identity.remote())
 		logger.info("Hard actor identity: %s", hard_identity)
@@ -87,10 +86,9 @@ def run_pipeline(
 
 				soft_outputs = [s for s in ray.get(soft_futures) if s is not None]
 
-				#!TODO: Remove before submission
 				if debug_workers:
 					soft_pids = sorted({int(item["_ray"]["pid"]) for item in soft_outputs if "_ray" in item})
-					logger.info("Soft workers used this batch: count=%d pids=%s", len(soft_pids), soft_pids)
+					logger.info("Soft workers used this batch: count=%d pids=%s\n", len(soft_pids), soft_pids)
 
 				if not soft_outputs:
 					continue
@@ -156,8 +154,10 @@ def run_pipeline(
 				
 				end = time.time()
 				logger.info("Batch %d processed in %.3f seconds", idx + 1, end - start)
+
+			final_end = time.time()
 			logger.info("%s Final Report %s", '='*10, '='*10)
-			logger.info("Total time taken: %.3f (Including around 15 seconds of ray initialization time)", end - init_time)
+			logger.info("Total time taken: %.3f (Including around 15 seconds of ray initialization time)", final_end - init_time)
 			logger.info("Total Samples: %d", total_accepts + total_rejects)
 			logger.info("Total Rejects: %d", total_rejects)
 			logger.info("Total Accepts: %d", total_accepts)
