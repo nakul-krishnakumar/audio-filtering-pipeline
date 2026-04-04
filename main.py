@@ -1,12 +1,13 @@
-from src.pipeline import run_pipeline
+from src.pipeline.run import run_pipeline
 
 
 def main():
     run_pipeline(
         manifest_path = "./data/manifests/test_manifest.jsonl",
 		target_sr = 16000,
-        batch_size = 32,
+        batch_size = 5,
         num_data_loader_workers = 8,
+        debug_workers=True
 	)
 
     return

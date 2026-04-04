@@ -43,5 +43,5 @@ if __name__ == "__main__":
     generate_manifest(
         root_dir="./data/manifests",
         output_file="./data/manifests/test_manifest.jsonl",
-        max_lines_per_file=250,
+        max_lines_per_file=10,
     )

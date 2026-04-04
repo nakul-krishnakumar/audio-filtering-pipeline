@@ -5,12 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "huggingface-hub>=1.8.0",
+    "brouhaha",
+    "huggingface-hub>=0.34.0,<1.0",
     "librosa>=0.11.0",
     "polars>=1.39.3",
+    "pyannote-audio==3.3.0",
     "pydantic>=2.12.5",
-    "torch>=2.11.0",
-    "torchaudio>=2.11.0",
+    "ray[default]>=2.54.1",
+    "torch==2.2.2",
+    "torchaudio==2.2.2",
     "tqdm>=4.67.3",
-    "transformers>=5.5.0",
+    "transformers>=4.41.0,<5",
 ]
+
+[tool.uv.sources]
+brouhaha = { url = "https://github.com/marianne-m/brouhaha-vad/archive/main.zip" }
