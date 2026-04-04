@@ -69,6 +69,10 @@ def run_pipeline(
 
 	try:
 		with open(output_file, "w", encoding="utf-8") as output_f:
+			init_time = time.time()
+			total_rejects = 0
+			total_accepts = 0
+			rejects_due_to = [0] * 8
 			for idx, batch in enumerate(dataIterator):
 				start = time.time()
 				soft_futures = [soft_filter_task.remote(sample) for sample in batch]
@@ -92,6 +96,29 @@ def run_pipeline(
 				for soft_result, hard_result in zip(soft_results, hard_results):
 					result = {**soft_result, **hard_result}
 					
+					reasons = []
+
+					if not (cfg["min_duration"] < result["duration"] <= cfg["max_duration"]):
+						reasons.append(0)
+
+					if result["c50"] < cfg["min_c50"]:
+						reasons.append(1)
+
+					if result["snr"] < cfg["min_snr"]:
+						reasons.append(2)
+
+					if result["silence_ratio"] > cfg["max_silence_ratio"]:
+						reasons.append(3)
+
+					if result["clipping_ratio"] >= cfg["max_clipping_ratio"]:
+						reasons.append(4)
+
+					if result["vad_ratio"] < cfg["min_vad_ratio"]:
+						reasons.append(5)
+
+					if result["asr"] < cfg["min_asr_conf"]:
+						reasons.append(6)
+
 					pass_nisqa = sum([
 						result["mos"] >= cfg["min_mos"],
 						result["noisiness"] >= cfg["min_noisiness"],
@@ -100,24 +127,37 @@ def run_pipeline(
 						result["loudness"] >= cfg["min_loudness"],
 					]) >= 4
 
-					if (
-						cfg["min_duration"] < result["duration"] < cfg["max_duration"] and
-						result["c50"] >= cfg["min_c50"] and
-						result["snr"] >= cfg["min_snr"] and
-						result["silence_ratio"] <= cfg["max_silence_ratio"] and
-						result["clipping_ratio"] < cfg["max_clipping_ratio"] and
-						result["vad_ratio"] >= cfg["min_vad_ratio"] and
-						result["asr"] >= cfg["min_asr_conf"] and
-						pass_nisqa
-					):
-						result["status"] = "Accept"
-					else:
+					if not pass_nisqa:
+						reasons.append(7)
+
+					if reasons:
 						result["status"] = "Reject"
-
+						for r in reasons:
+							rejects_due_to[r] += 1
+					
+						total_rejects += 1
+					else:
+						result["status"] = "Accept"
+						total_accepts += 1
 					output_f.write(json.dumps(result, ensure_ascii=False) + "\n")
-
+				
 				end = time.time()
 				logger.info(f"Batch {idx+1} processed in {end - start} seconds")
+			logger.info(f"{'='*10} Final Report {'='*60}")
+			logger.info(f"Total time taken: {end - init_time} (Including around 15 seconds of ray initialization time)")
+			logger.info(f"Total Samples: {total_accepts + total_rejects}")
+			logger.info(f"Total Rejects: {total_rejects}")
+			logger.info(f"Total Accepts: {total_accepts}")
+			logger.info(f"Rejected due to Duration: {rejects_due_to[0]}")
+			logger.info(f"Rejected due to C50: {rejects_due_to[1]}")
+			logger.info(f"Rejected due to Signal-to-Noise Ratio: {rejects_due_to[2]}")
+			logger.info(f"Rejected due to Silence Ratio: {rejects_due_to[3]}")
+			logger.info(f"Rejected due to VAD Ratio: {rejects_due_to[4]}")
+			logger.info(f"Rejected due to ASR Confidence: {rejects_due_to[5]}")
+			logger.info(f"Rejected due to Clipping Ratio: {rejects_due_to[6]}")
+			logger.info(f"Rejected due to NISQA Metrics: {rejects_due_to[7]}")
+			logger.debug("Note that a sample can be rejected due to one or more reasons!")
+			logger.info('='*85)
 
 		return
 	finally:
