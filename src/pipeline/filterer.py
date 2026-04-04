@@ -8,10 +8,12 @@ import torch
 import whisper
 from pyannote.audio import Inference, Model
 from torchmetrics.audio import NonIntrusiveSpeechQualityAssessment
+from transformers.utils import logging
 
 from ..utils.logger import Logger
 from ..utils.data_loader import AudioSample
 
+logging.set_verbosity_info()
 
 def _runtime_identity() -> dict[str, str | int]:
 	ctx = ray.get_runtime_context()
@@ -83,21 +85,25 @@ class AudioFilterer:
 			threshold = 10 ** (self.config["silence_threshold_db"] / 10.0)
 			return (frame_power < threshold).float().mean().item()
 	
-	def calc_asr_confidence(self, audio_path) -> float:
+	def calc_asr_confidence(self, audio_path) -> tuple[float, str]:
 		result = self.asr_model.transcribe(audio_path, temperature=0)
 
-		tokens = result["segments"]
+		tokens = result.get("segments", [])
+		lang = result.get("language", "unknown")
 		if len(tokens) == 0:
-			return 0.0 
+			return 0.0, lang
 
 		log_probs = []
 		for seg in tokens:
 			if "avg_logprob" in seg:
 				log_probs.append(seg["avg_logprob"])
 
+		if not log_probs:
+			return 0.0, lang
+
 		prob = np.exp(log_probs)
 
-		return float(np.mean(prob))
+		return float(np.mean(prob)), lang
 
 	def calc_nisqa_metrics(self, waveform: torch.Tensor) -> torch.Tensor:
 		return self.nisqa_model(waveform)
@@ -121,7 +127,7 @@ class AudioFilterer:
 			return {"vad_ratio": 0.0, "snr": 0.0, "c50": 0.0}
 
 		output = self.brouhaha_inference(sample.audio_filepath)
-		asr_conf = self.calc_asr_confidence(sample.audio_filepath)
+		asr_conf, pred_lang = self.calc_asr_confidence(sample.audio_filepath)
 		nisqa_metrics = self.calc_nisqa_metrics(sample.audio)
 
 		results = {
@@ -131,6 +137,8 @@ class AudioFilterer:
 			"discontinuity": float(nisqa_metrics[2]),
         	"coloration": float(nisqa_metrics[3]),
         	"loudness": float(nisqa_metrics[4]),
+			"pred_lang": pred_lang,
+			"expected_lang": sample.lang,
 			"vad_ratio": 0.0, 
 			"snr": 0.0, 
 			"c50": 0.0, 

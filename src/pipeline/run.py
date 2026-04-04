@@ -6,15 +6,22 @@ import json
 import os
 import time
 import ray
-from typing import Optional
 
 from huggingface_hub import get_token as hf_get_token
 
+UNSUPPORTED_LANGS = [
+	"brx", #bodo
+	"doi", #dogri
+	"ks", # kashmiri
+	"kok", # konkani
+	"mai", # maithili
+	"mni", # manipuri
+	"sat", # santali
+	"or", # odia or oria
+]
+
 with open("thresholds.json", "r", encoding="utf-8") as f:
     cfg = json.load(f)
-def _resolve_hf_token() -> Optional[str]:
-	# Prefer explicit env var, then fall back to token saved by `hf auth login`.
-	return os.getenv("HF_TOKEN") or hf_get_token()
 
 def collate_fn(batch):
     return batch
@@ -36,7 +43,7 @@ def run_pipeline(
 		cluster = ray.cluster_resources()
 		logger.info(f"Ray cluster resources: {cluster}")
 
-	hf_token = _resolve_hf_token()
+	hf_token = os.getenv("HF_TOKEN") or hf_get_token()
 	if hf_token:
 		logger.info("Hugging Face token resolved (env or local cache).")
 	else:
@@ -72,7 +79,7 @@ def run_pipeline(
 			init_time = time.time()
 			total_rejects = 0
 			total_accepts = 0
-			rejects_due_to = [0] * 8
+			rejects_due_to = [0] * 9
 			for idx, batch in enumerate(dataIterator):
 				start = time.time()
 				soft_futures = [soft_filter_task.remote(sample) for sample in batch]
@@ -116,8 +123,13 @@ def run_pipeline(
 					if result["vad_ratio"] < cfg["min_vad_ratio"]:
 						reasons.append(5)
 
-					if result["asr"] < cfg["min_asr_conf"]:
-						reasons.append(6)
+					if result["expected_lang"] not in UNSUPPORTED_LANGS:
+						if result["asr"] < cfg["min_asr_conf"]:
+							reasons.append(6)
+						
+						if result["pred_lang"] != result["expected_lang"]:
+							logger.warn(f"Expected lang: {result['expected_lang']} | Predicted lang: {result['pred_lang']}")
+							reasons.append(7)
 
 					pass_nisqa = sum([
 						result["mos"] >= cfg["min_mos"],
@@ -128,7 +140,7 @@ def run_pipeline(
 					]) >= 4
 
 					if not pass_nisqa:
-						reasons.append(7)
+						reasons.append(8)
 
 					if reasons:
 						result["status"] = "Reject"
@@ -155,7 +167,8 @@ def run_pipeline(
 			logger.info(f"Rejected due to Clipping Ratio: {rejects_due_to[4]}")
 			logger.info(f"Rejected due to VAD Ratio: {rejects_due_to[5]}")
 			logger.info(f"Rejected due to ASR Confidence: {rejects_due_to[6]}")
-			logger.info(f"Rejected due to NISQA Metrics: {rejects_due_to[7]}")
+			logger.info(f"Rejected due to Unidentified Language: {rejects_due_to[7]}")
+			logger.info(f"Rejected due to NISQA Metrics: {rejects_due_to[8]}")
 			logger.debug("Note that a sample can be rejected due to one or more reasons!")
 			logger.info('='*85)
 			logger.debug(cfg)
