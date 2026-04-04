@@ -13,12 +13,6 @@ from pyannote.audio import Inference, Model
 from ..utils.logger import Logger
 from ..utils.data_loader import AudioSample
 
-from enum import Enum
-
-class status(Enum):
-	REJECT = 1
-	ACCEPT = 2
-
 
 def _runtime_identity() -> dict[str, str | int]:
 	ctx = ray.get_runtime_context()
@@ -147,23 +141,8 @@ def soft_filter_task(sample: AudioSample):
 	logger = Logger("soft_filter")
 	filterer = AudioFilterer(logger=logger, hf_token=None)
 	identity = _runtime_identity()
-	# Note that we initialised AudioFilterer object without brouhaha model, so
-	# no need to use ray actors
 
 	result = filterer.compute_soft(sample)
-	result["status"] = status.ACCEPT.name
-
-	# TODO
-	if result["duration"] < 1.0:
-		result["status"] = status.REJECT.name
-	if result["silence_ratio"] > 0.6:
-		result["status"] = status.REJECT.name
-	if result["clipping_ratio"] > 0.2:
-		result["status"] = status.REJECT.name
-
-	if result["status"] == status.REJECT.name:
-		return None
-
 	return {"sample": sample, "soft_metrics": result, "_ray": identity}
 
 """
