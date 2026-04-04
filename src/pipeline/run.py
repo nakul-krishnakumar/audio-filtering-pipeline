@@ -22,13 +22,13 @@ def collate_fn(batch):
 def run_pipeline(
 		manifest_path: str = "./data/manifests/test_manifest.jsonl",
 		output_dir: str = "./output",
-		target_sr: int = 160000,
+		target_sr: int = 16000,
         batch_size: int = 8,
         num_data_loader_workers: int = 4,
 		debug_workers: bool = False,
 	):
 
-	ray.init()
+	ray.init(address="auto")
 	logger = Logger()
 	logger.info("Pipeline started")
 
@@ -152,12 +152,13 @@ def run_pipeline(
 			logger.info(f"Rejected due to C50: {rejects_due_to[1]}")
 			logger.info(f"Rejected due to Signal-to-Noise Ratio: {rejects_due_to[2]}")
 			logger.info(f"Rejected due to Silence Ratio: {rejects_due_to[3]}")
-			logger.info(f"Rejected due to VAD Ratio: {rejects_due_to[4]}")
-			logger.info(f"Rejected due to ASR Confidence: {rejects_due_to[5]}")
-			logger.info(f"Rejected due to Clipping Ratio: {rejects_due_to[6]}")
+			logger.info(f"Rejected due to Clipping Ratio: {rejects_due_to[4]}")
+			logger.info(f"Rejected due to VAD Ratio: {rejects_due_to[5]}")
+			logger.info(f"Rejected due to ASR Confidence: {rejects_due_to[6]}")
 			logger.info(f"Rejected due to NISQA Metrics: {rejects_due_to[7]}")
 			logger.debug("Note that a sample can be rejected due to one or more reasons!")
 			logger.info('='*85)
+			logger.debug(cfg)
 
 		return
 	finally:
