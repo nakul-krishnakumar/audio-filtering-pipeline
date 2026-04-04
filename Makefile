@@ -1,4 +1,4 @@
-.PHONY: install stop start_head start_worker run
+.PHONY: install stop start_head start_worker run dashboard
 
 DIR ?= ./data
 ADDR ?= 0.0.0.0
@@ -31,3 +31,8 @@ run_head:
 	rm -rf /tmp/ray
 	uv run ray start --head --port=$(PORT)
 	uv run --active python main.py
+	uv run ray stop --force || true
+	rm -rf /tmp/ray
+
+dashboard:
+	uv run python dashboard/app.py

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Filtering Pipeline Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { margin: 0 0 10px 0; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .info { color: #666; }
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .submit-btn:hover { background: #0056b3; }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover { background: #f8f9fa; }
+        .status-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .status-select.accept { background: #d4edda; border-color: #28a745; }
+        .status-select.reject { background: #f8d7da; border-color: #dc3545; }
+        .changed { outline: 2px solid #ffc107; }
+        audio { height: 32px; width: 200px; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination a, .pagination span {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+        .pagination a:hover { background: #f0f0f0; }
+        .pagination .current { background: #007bff; color: white; border-color: #007bff; }
+        .pagination .disabled { color: #ccc; pointer-events: none; }
+        .filename { max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+        .num { text-align: right; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            display: none;
+        }
+        .toast.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Audio Filter Dashboard</h1>
+            <p class="info">Showing {{ samples|length }} of {{ total_samples }} samples (Page {{ page }}/{{ total_pages }})</p>
+        </div>
+        <button class="submit-btn" onclick="submitChanges()">Submit Changes</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Filename</th>
+                    <th>Audio</th>
+                    <th>Status</th>
+                    <th class="num">Duration</th>
+                    <th class="num">ASR</th>
+                    <th class="num">MOS</th>
+                    <th class="num">SNR</th>
+                    <th class="num">C50</th>
+                    <th>Pred Lang</th>
+                    <th>Exp Lang</th>
+                    <th class="num">VAD Ratio</th>
+                    <th class="num">Silence</th>
+                    <th class="num">Clipping</th>
+                    <th class="num">Noisiness</th>
+                    <th class="num">Discontinuity</th>
+                    <th class="num">Coloration</th>
+                    <th class="num">Loudness</th>
+                    <th>Rejected Due To</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sample in samples %}
+                <tr>
+                    <td>{{ sample._idx + 1 }}</td>
+                    <td class="filename" title="{{ sample.audio_filepath }}">{{ sample._filename }}</td>
+                    <td>
+                        <audio controls preload="none" src="/audio/{{ sample._idx }}"></audio>
+                    </td>
+                    <td>
+                        <select class="status-select {{ sample.status|lower }}" 
+                                data-idx="{{ sample._idx }}" 
+                                data-original="{{ sample.status }}"
+                                onchange="handleStatusChange(this)">
+                            <option value="Accept" {% if sample.status == 'Accept' %}selected{% endif %}>Accept</option>
+                            <option value="Reject" {% if sample.status == 'Reject' %}selected{% endif %}>Reject</option>
+                        </select>
+                    </td>
+                    <td class="num">{{ "%.2f"|format(sample.duration) }}s</td>
+                    <td class="num">{{ "%.3f"|format(sample.asr) }}</td>
+                    <td class="num">{{ "%.2f"|format(sample.mos) }}</td>
+                    <td class="num">{{ "%.1f"|format(sample.snr) }}</td>
+                    <td class="num">{{ "%.1f"|format(sample.c50) }}</td>
+                    <td>{{ sample.pred_lang }}</td>
+                    <td>{{ sample.expected_lang }}</td>
+                    <td class="num">{{ "%.3f"|format(sample.vad_ratio) }}</td>
+                    <td class="num">{{ "%.3f"|format(sample.silence_ratio) }}</td>
+                    <td class="num">{{ "%.6f"|format(sample.clipping_ratio) }}</td>
+                    <td class="num">{{ "%.2f"|format(sample.noisiness) }}</td>
+                    <td class="num">{{ "%.2f"|format(sample.discontinuity) }}</td>
+                    <td class="num">{{ "%.2f"|format(sample.coloration) }}</td>
+                    <td class="num">{{ "%.2f"|format(sample.loudness) }}</td>
+                    <td>{{ sample.reject_due_to | join(", ") if sample.reject_due_to else "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        {% if page > 1 %}
+            <a href="?page={{ page - 1 }}">Previous</a>
+        {% else %}
+            <span class="disabled">Previous</span>
+        {% endif %}
+        
+        <span class="current">{{ page }} / {{ total_pages }}</span>
+        
+        {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}">Next</a>
+        {% else %}
+            <span class="disabled">Next</span>
+        {% endif %}
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const changes = {};
+
+        function handleStatusChange(select) {
+            const idx = select.dataset.idx;
+            const original = select.dataset.original;
+            const current = select.value;
+
+            // Update visual style
+            select.className = 'status-select ' + current.toLowerCase();
+            
+            // Track changes
+            if (current !== original) {
+                changes[idx] = current;
+                select.classList.add('changed');
+            } else {
+                delete changes[idx];
+                select.classList.remove('changed');
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast' + (isError ? ' error' : '');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        async function submitChanges() {
+            const count = Object.keys(changes).length;
+            if (count === 0) {
+                showToast('No changes to submit');
+                return;
+            }
+
+            const btn = document.querySelector('.submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ updates: changes })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast(`Updated ${result.updated} sample(s)`);
+                    
+					// Update original values and remove changed styling
+                    document.querySelectorAll('.status-select.changed').forEach(select => {
+                        select.dataset.original = select.value;
+                        select.classList.remove('changed');
+                    });
+                    
+					// Clear changes
+                    Object.keys(changes).forEach(k => delete changes[k]);
+                } else {
+                    showToast('Failed to save changes', true);
+                }
+            } catch (err) {
+                showToast('Error: ' + err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Submit Changes';
+            }
+        }
+    </script>
+</body>
+</html>
