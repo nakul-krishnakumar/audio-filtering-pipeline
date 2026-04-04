@@ -7,6 +7,7 @@ import os
 import numpy as np
 import ray
 import torch
+import whisper
 from pyannote.audio import Inference, Model
 
 from ..utils.logger import Logger
@@ -46,6 +47,7 @@ class AudioFilterer:
 		hf_token: Optional[str] = None,
 		device: Optional[str | torch.device] = None,
 		config: MetricConfig = MetricConfig(),
+		use_hard_filters: bool = False,
 	):
 		self.logger = logger
 		self.config = config
@@ -55,12 +57,15 @@ class AudioFilterer:
 			self.device = device if isinstance(device, torch.device) else torch.device(device)
 
 		self.brouhaha_inference: Optional[Inference] = None
-		if hf_token:
-			model = Model.from_pretrained(
-				"pyannote/brouhaha",
-				use_auth_token=hf_token,
-			)
-			self.brouhaha_inference = Inference(model, device=self.device)
+		if use_hard_filters:
+			if hf_token:
+				model = Model.from_pretrained(
+					"pyannote/brouhaha",
+					use_auth_token=hf_token,
+				)
+				self.brouhaha_inference = Inference(model, device=self.device)
+			
+			self.asr_model = whisper.load_model("tiny")
 
 	def calc_norm(self, waveform: torch.Tensor) -> torch.Tensor:
 		return waveform / (waveform.abs().max() + 1e-10)
@@ -82,6 +87,22 @@ class AudioFilterer:
 			frame_power = (frames ** 2).mean(dim=1)
 			threshold = 10 ** (self.config.silence_threshold_db / 10.0)
 			return (frame_power < threshold).float().mean().item()
+	
+	def calc_asr_confidence(self, audio_path) -> float:
+		result = self.asr_model.transcribe(audio_path, temperature=0)
+
+		tokens = result["segments"]
+		if len(tokens) == 0:
+			return 0.0 
+
+		log_probs = []
+		for seg in tokens:
+			if "avg_logprob" in seg:
+				log_probs.append(seg["avg_logprob"])
+
+		prob = np.exp(log_probs)
+
+		return float(np.mean(prob))
 
 	def compute_soft(self, sample: AudioSample) -> dict[str, Any]:
 		waveform = sample.audio
@@ -102,6 +123,7 @@ class AudioFilterer:
 			return {"vad_ratio": 0.0, "snr": 0.0, "c50": 0.0}
 
 		output = self.brouhaha_inference(sample.audio_filepath)
+		asr_conf = self.calc_asr_confidence(sample.audio_filepath)
 
 		vad_vals, snr_vals, c50_vals = [], [], []
 
@@ -111,12 +133,13 @@ class AudioFilterer:
 			c50_vals.append(c50)
 
 		if not vad_vals:
-			return {"vad_ratio": 0.0, "snr": 0.0, "c50": 0.0}
+			return {"vad_ratio": 0.0, "snr": 0.0, "c50": 0.0, "asr": asr_conf}
 
 		return {
 			"vad_ratio": float((np.array(vad_vals) > self.config.vad_threshold).mean()),
 			"snr": float(np.median(snr_vals)),
 			"c50": float(np.median(c50_vals)),
+			"asr": asr_conf
 		}
 	
 @ray.remote(num_cpus=1)
@@ -154,7 +177,7 @@ Why ray actor for HardFilters but not for SoftFilters?
 class HardFilterActor:
 	def __init__(self, hf_token: Optional[str] = None):
 		logger = Logger("hard_filter")
-		self.filterer = AudioFilterer(logger=logger, hf_token=hf_token)
+		self.filterer = AudioFilterer(logger=logger, hf_token=hf_token, use_hard_filters=True)
 		self.identity = _runtime_identity()
 
 	def get_identity(self):

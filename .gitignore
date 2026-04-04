@@ -11,3 +11,6 @@ wheels/
 
 # Dataset
 data/*
+
+# Ray temporary files
+.ray_tmp/*

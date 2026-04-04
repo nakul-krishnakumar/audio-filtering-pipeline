@@ -38,7 +38,7 @@ def run_pipeline(
 		debug_workers: bool = False,
 	):
 
-	ray.init(address="auto")
+	ray.init()
 	logger = Logger()
 	logger.info("Pipeline started")
 	if debug_workers:
@@ -65,6 +65,8 @@ def run_pipeline(
 	)
 
 	hard_filter_actor = HardFilterActor.remote(hf_token=hf_token)
+
+	#!TODO: Remove before submission
 	if debug_workers:
 		hard_identity = ray.get(hard_filter_actor.get_identity.remote())
 		logger.info(f"Hard actor identity: {hard_identity}")
@@ -75,6 +77,8 @@ def run_pipeline(
 			soft_futures = [soft_filter_task.remote(sample) for sample in batch]
 
 			soft_outputs = [s for s in ray.get(soft_futures) if s is not None]
+
+			#!TODO: Remove before submission
 			if debug_workers:
 				soft_pids = sorted({int(item["_ray"]["pid"]) for item in soft_outputs if "_ray" in item})
 				logger.info(f"Soft workers used this batch: count={len(soft_pids)} pids={soft_pids}")
