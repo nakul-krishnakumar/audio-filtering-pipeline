@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Optional
 
 import os
@@ -9,15 +8,12 @@ import whisper
 import numpy as np
 from pyannote.audio import Inference, Model
 from torchmetrics.audio import NonIntrusiveSpeechQualityAssessment
-from transformers.utils import logging
 
 from ..utils.logger import Logger
 from ..utils.data_loader import AudioSample
 
-logging.set_verbosity_info()
-
 with open("hyper_params.json", "r", encoding="utf-8") as f:
-    cfg = json.load(f)
+    CFG = json.load(f)
 
 
 def _runtime_identity() -> dict[str, str | int]:
@@ -42,7 +38,7 @@ class AudioFilterer:
 		use_hard_filters: bool = False,
 	):	
 		
-		self.config = cfg # hyperparameters
+		self.config = CFG # hyperparameters
 
 		self.logger = logger
 		if device is None:
@@ -61,7 +57,7 @@ class AudioFilterer:
 				)
 				self.brouhaha_inference = Inference(model, device=self.device).to(self.device)
 			
-			 # Not running whisper on gpu as it was keeping on running into errors
+			#! If cuda raises any error, try running whisper on cpu
 			self.asr_model = whisper.load_model("tiny").to(torch.device("cuda"))
 			self.nisqa_model = NonIntrusiveSpeechQualityAssessment(fs=sr).to(self.device)
 

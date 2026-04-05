@@ -1,13 +1,16 @@
-from ..utils.data_loader import StreamingAudioDataset
 from ..utils.logger import Logger
+from ..utils.data_loader import StreamingAudioDataset
 from .filterer import HardFilterActor, soft_filter_task
-from torch.utils.data import DataLoader
+
 import json
 import os
 import time
 import ray
-
+from dotenv import load_dotenv
+from torch.utils.data import DataLoader
 from huggingface_hub import get_token as hf_get_token
+
+load_dotenv()
 
 # Set of unsupported languages by whisper to do ASR and LID
 UNSUPPORTED_LANGS = [
@@ -167,7 +170,7 @@ def run_pipeline(
 				logger.info("Batch %d processed in %.3f seconds", idx + 1, end - start)
 
 			final_end = time.time()
-			logger.info("%s Final Report %s", '='*50, '='*50)
+			logger.info("%s Final Report %s", '='*20, '='*50)
 			logger.info("Total time taken: %.3f (Including around 15 seconds of ray initialization time)", final_end - init_time)
 			logger.info("Total Samples: %d", total_accepts + total_rejects)
 			logger.info("Total Rejects: %d", total_rejects)

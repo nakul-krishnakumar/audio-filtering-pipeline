@@ -21,7 +21,7 @@ start_head:
 start_worker:
 	uv run ray stop --force || true
 	rm -rf /tmp/ray
-	uv run ray start --address=$(ADDR):$(PORT)
+	uv run ray start --address="$(ADDR):$(PORT)"
 
 run:
 	uv run --active python main.py
@@ -31,8 +31,6 @@ run_head:
 	rm -rf /tmp/ray
 	uv run ray start --head --port=$(PORT)
 	uv run --active python main.py
-	uv run ray stop --force || true
-	rm -rf /tmp/ray
 
 dashboard:
 	uv run python dashboard/app.py
