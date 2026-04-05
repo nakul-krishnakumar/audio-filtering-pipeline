@@ -1,11 +1,13 @@
-.PHONY: install stop start_head start_worker run dashboard
+.PHONY: install download stop start_head start_worker run dashboard
 
 DIR ?= ./data
-ADDR ?= 0.0.0.0
+ADDR ?= 127.0.0.1
 PORT ?= 6379
 
 install:
 	uv sync
+
+download:
 	uv run python scripts/setup_dataset.py $(DIR)
 	uv run python scripts/generate_test_manifest.py
 

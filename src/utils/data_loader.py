@@ -27,8 +27,7 @@ class StreamingAudioDataset(IterableDataset):
 	def _resolve_audio_path(self, path: str) -> str:
 		if os.path.isabs(path):
 			return path
-		# Resolve relative entries against current cwd first (common case), then
-		# against manifest location for portability.
+
 		cwd_candidate = os.path.abspath(path)
 		if os.path.exists(cwd_candidate):
 			return cwd_candidate
