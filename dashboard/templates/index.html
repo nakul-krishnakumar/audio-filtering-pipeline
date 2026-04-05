@@ -17,22 +17,90 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
             gap: 10px;
         }
-        .info { color: #666; }
+        .info { color: #666; margin: 0; }
         .submit-btn {
             background: #007bff;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
+            padding: 10px 20px;
+            font-size: 14px;
             cursor: pointer;
             border-radius: 4px;
         }
         .submit-btn:hover { background: #0056b3; }
         .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+        }
+        .control-group select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .clear-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border: 1px solid #dc3545;
+            background: white;
+            color: #dc3545;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .clear-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+		
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .filter-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .filter-btn:hover { background: #f0f0f0; }
+        .filter-btn.active {
+            background: #007bff !important;
+            color: white !important;
+            border-color: #007bff !important;
+        }
+        .filter-btn.clear {
+            background: #f8f9fa;
+            border-color: #ccc;
+        }
+        .filter-btn.clear:hover { background: #e9ecef; }
+
         .table-container {
             overflow-x: auto;
             background: white;
@@ -102,10 +170,42 @@
 <body>
     <div class="header">
         <div>
-            <h1>Audio Filter Dashboard</h1>
+            <h1>Audio Filtering Pipeline Dashboard</h1>
             <p class="info">Showing {{ samples|length }} of {{ total_samples }} samples (Page {{ page }}/{{ total_pages }})</p>
         </div>
         <button class="submit-btn" onclick="submitChanges()">Submit Changes</button>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Sort by:</label>
+            <select id="sort-select" onchange="applyControls()">
+                <option value="">-- None --</option>
+                {% for col in sortable_columns %}
+                <option value="{{ col }}" {% if sort_by == col %}selected{% endif %}>{{ col | replace("_", " ") | title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Order:</label>
+            <select id="order-select" onchange="applyControls()">
+                <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+            </select>
+        </div>
+        <button class="clear-btn" onclick="clearAll()">Clear All</button>
+    </div>
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filters">
+        <button class="filter-btn clear {% if not filter_name %}active{% endif %}" onclick="setFilter('')">All Samples</button>
+        {% for f in filters %}
+        <button class="filter-btn {% if filter_name == f %}active{% endif %}" onclick="setFilter('{{ f }}')">
+            {{ f | replace("_", " ") | title }} Boundary
+        </button>
+        {% endfor %}
     </div>
 
     <div class="table-container">
@@ -116,6 +216,7 @@
                     <th>Filename</th>
                     <th>Audio</th>
                     <th>Status</th>
+                    <th>Rejected Due To</th>
                     <th class="num">Duration</th>
                     <th class="num">ASR</th>
                     <th class="num">MOS</th>
@@ -130,7 +231,6 @@
                     <th class="num">Discontinuity</th>
                     <th class="num">Coloration</th>
                     <th class="num">Loudness</th>
-                    <th>Rejected Due To</th>
                 </tr>
             </thead>
             <tbody>
@@ -150,6 +250,7 @@
                             <option value="Reject" {% if sample.status == 'Reject' %}selected{% endif %}>Reject</option>
                         </select>
                     </td>
+                    <td>{{ sample.reject_due_to | join(", ") if sample.reject_due_to else "-" }}</td>
                     <td class="num">{{ "%.2f"|format(sample.duration) }}s</td>
                     <td class="num">{{ "%.3f"|format(sample.asr) }}</td>
                     <td class="num">{{ "%.2f"|format(sample.mos) }}</td>
@@ -164,7 +265,6 @@
                     <td class="num">{{ "%.2f"|format(sample.discontinuity) }}</td>
                     <td class="num">{{ "%.2f"|format(sample.coloration) }}</td>
                     <td class="num">{{ "%.2f"|format(sample.loudness) }}</td>
-                    <td>{{ sample.reject_due_to | join(", ") if sample.reject_due_to else "-" }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -172,8 +272,9 @@
     </div>
 
     <div class="pagination">
+        {% set base_params = "sort=" ~ sort_by ~ "&order=" ~ order ~ "&filter=" ~ filter_name %}
         {% if page > 1 %}
-            <a href="?page={{ page - 1 }}">Previous</a>
+            <a href="?page={{ page - 1 }}&{{ base_params }}">Previous</a>
         {% else %}
             <span class="disabled">Previous</span>
         {% endif %}
@@ -181,7 +282,7 @@
         <span class="current">{{ page }} / {{ total_pages }}</span>
         
         {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}">Next</a>
+            <a href="?page={{ page + 1 }}&{{ base_params }}">Next</a>
         {% else %}
             <span class="disabled">Next</span>
         {% endif %}
@@ -192,15 +293,52 @@
     <script>
         const changes = {};
 
+        const currentSort = "{{ sort_by }}";
+        const currentOrder = "{{ order }}";
+        const currentFilter = "{{ filter_name }}";
+
+        function buildUrl(params) {
+            const url = new URL(window.location.href);
+            url.search = '';
+            for (const [key, value] of Object.entries(params)) {
+                if (value) url.searchParams.set(key, value);
+            }
+            return url.toString();
+        }
+
+        function applyControls() {
+            const sort = document.getElementById('sort-select').value;
+            const order = document.getElementById('order-select').value;
+            window.location.href = buildUrl({
+                page: 1,
+                sort: sort,
+                order: order,
+                filter: currentFilter
+            });
+        }
+
+        function clearAll() {
+            window.location.href = buildUrl({ page: 1 });
+        }
+
+        function setFilter(filterName) {
+            const sort = document.getElementById('sort-select').value;
+            const order = document.getElementById('order-select').value;
+            window.location.href = buildUrl({
+                page: 1,
+                sort: sort,
+                order: order,
+                filter: filterName
+            });
+        }
+
         function handleStatusChange(select) {
             const idx = select.dataset.idx;
             const original = select.dataset.original;
             const current = select.value;
 
-            // Update visual style
             select.className = 'status-select ' + current.toLowerCase();
             
-            // Track changes
             if (current !== original) {
                 changes[idx] = current;
                 select.classList.add('changed');
@@ -239,14 +377,10 @@
                 const result = await response.json();
                 if (result.success) {
                     showToast(`Updated ${result.updated} sample(s)`);
-                    
-					// Update original values and remove changed styling
                     document.querySelectorAll('.status-select.changed').forEach(select => {
                         select.dataset.original = select.value;
                         select.classList.remove('changed');
                     });
-                    
-					// Clear changes
                     Object.keys(changes).forEach(k => delete changes[k]);
                 } else {
                     showToast('Failed to save changes', true);
