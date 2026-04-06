@@ -368,7 +368,7 @@ The active decision thresholds are from `thresholds.json`.
 ### Whisper tiny usage
 
 - Whisper tiny was chosen for simplicity and resource constraints, with known limitations for Indic language coverage.
-- If resources available, I would use `IndicConformer-600m-multilingual` for `WER` and `CER` calculation and `IndicLID` for language detection.
+- If resources were available, I would use `IndicConformer-600m-multilingual` for `WER` and `CER` calculation and `IndicLID` for language detection.
 
 - Whisper does not reliably support the following languages (not explicitly trained), and misclassifies them:
 
@@ -401,8 +401,8 @@ Soft metrics are lightweight and stateless, so task-level fanout is sufficient.
 - But then realised that ray did this job very well internally and reduces complexity.
 - Ray can scale very well both in parallel as well as distributed setups.
 - To scale parallely, we could add more Ray Tasks and Actors.
-- To scale distributively, we can add more worker nodes to the Ray cluster, increasing resource pools.
-- I tested Ray cluster connectivity by connecting to my head node from another laptop.
+- To scale distributively, we can add more worker nodes to the Ray cluster, increasing resource pool.
+- I tested Ray cluster connectivity by deploying a worker node on another laptop and connecting it to my head node.
 
 ### Why not Dockerize?
 
@@ -422,7 +422,9 @@ Pipeline was not dockerized for this submission. Containerizing distributed Ray 
 
 ### Demo Run
 - Here is a demo run video of me running the pipeline, monitoring the ray runtime and finally reviewing the final output through the dashboard. **The video is sped up by 2x to reduce size**
-<video controls src="images/output.mp4" title="Demo Video">If this video doesnt play, go to images/output.mp4</video>
+
+<video controls src="images/output.mp4" title="Demo Video"></video>
+If this video doesnt play, watch it from here: [link](images/output.mp4).
 
 ### Observation: Gujarati false rejection example
 
