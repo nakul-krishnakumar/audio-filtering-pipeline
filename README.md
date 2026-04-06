@@ -423,6 +423,8 @@ Pipeline was not dockerized for this submission. Containerizing distributed Ray 
 ### Demo Run
 - Here is a demo run video of me running the pipeline, monitoring the ray runtime and finally reviewing the final output through the dashboard. **The video is sped up by 2x to reduce size**
 
+[demo-video](https://github.com/user-attachments/assets/3609113a-ac34-4b1b-af61-6550f6f4d709)
+
 <video controls src="images/output.mp4" title="Demo Video"></video>
 If this video doesnt play, watch it from here: [link](images/output.mp4).
 
