@@ -430,14 +430,14 @@ If this video doesnt play, watch it from here: [link](images/output.mp4).
 
 ### Observation: Gujarati false rejection example
 
-A clear Gujarati clip with high ASR confidence (`~0.957`) was rejected because predicted language was Hindi and C50 was below threshold.
+A clear Gujarati clip with high ASR confidence (`~0.957`) was rejected because it was misinterpreted as Hindi.
 
 This failure mode motivates stronger Indic-specific LID/ASR.
 
 ### Tiny vs Medium vs Large-v2 note
 
 - Tiny and Medium visual results are included above.
-- Large-v2 was not run in this submission due to resource/time constraints.
+- Large-v2 was not run in this submission due to resource constraints.
 - Expected trend: better multilingual robustness with larger models, at the cost of latency and memory.
 
 ---
@@ -445,22 +445,23 @@ This failure mode motivates stronger Indic-specific LID/ASR.
 ## Visual Analysis
 
 ### Metric Distribution
-- This graph shows the distribution of key metric values across the dataset.
+- This graph shows the distribution of key metric values across the dataset.</br>
 ![metric-dist](images/metric-dist.png)
 
 ### Metrics Correlation Heatmap
 - This graph shows the correlation between the filtering metrics.
-- The five NISQA-MOS metrics — MOS, noisiness, discontinuity, coloration, and loudness — are highly correlated. This supports the use of a relaxed gating rule rather than requiring all of them to pass strictly.
-- The heatmap also shows that the other metrics are only weakly correlated, which suggests that they capture complementary aspects of audio quality.
+- The five NISQA-MOS metrics (MOS, noisiness, discontinuity, coloration, and loudness) are highly correlated. This supports the use of a relaxed gating rule rather than requiring all of them to pass strictly.
+- The heatmap also shows that the other metrics are only weakly correlated, which suggests that they capture complementary aspects of audio quality.</br>
 ![corr-map](images/corr-map.png)
 
 ### Retention Curve
-- This graph shows the proportion of samples that would be retained at different levels of quality threshold, using a combined score derived from the filtering criteria.
-![ret-curve](images/ret-curve.png)
+- This graph shows the proportion of samples that would be retained at different levels of quality threshold, using a combined score derived from the filtering criteria.</br>
+  
+	![ret-curve](images/ret-curve.png)
 
 ### Rejection Breakdown
 - This graph shows the number of samples rejected by each metric.
-- Note that a sample can be rejected for multiple reasons.
+- Note that a sample can be rejected for multiple reasons.</br>
 ![rej-bdown](images/rej-bdown.png)
 
 ---
@@ -556,7 +557,6 @@ Example output file: `output/filtered_manifest.jsonl`
 1. Replace Whisper tiny with stronger Indic-capable ASR + explicit WER/CER.
 2. Replace LID proxy with dedicated Indic LID model.
 3. Replace NISQA-MOS with NORESQA-MOS.
-4. Train an XGBoost model on the manual reviews and status changes made on the samples after filtering. This will help to identify possible unnecessary patterns the pipeline is learning. 
 
 ---
 
