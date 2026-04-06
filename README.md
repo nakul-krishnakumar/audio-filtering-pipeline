@@ -12,7 +12,7 @@
 
 ---
 
-## Table of Contents =------------w-dwpd-wdw[ TODO ]----------------------wdawdawdawd
+## Table of Contents
 
 - [Audio Filtering Pipeline for Indic TTS Data](#audio-filtering-pipeline-for-indic-tts-data)
 		- [Sarvam TTS Assignment Submission](#sarvam-tts-assignment-submission)
@@ -31,15 +31,24 @@
 		- [Stop Ray runtime](#stop-ray-runtime)
 		- [Open Reviewer Dashboard](#open-reviewer-dashboard)
 	- [System Architecture](#system-architecture)
-		- [High-level stages](#high-level-stages)
 	- [Metrics Used](#metrics-used)
-	- [Design Choices and Trade-offs](#design-choices-and-trade-offs)
+	- [Design Decisions, Trade-offs and Engineering Notes](#design-decisions-trade-offs-and-engineering-notes)
 		- [Whisper tiny usage](#whisper-tiny-usage)
+		- [Why streaming dataset loading?](#why-streaming-dataset-loading)
+		- [Why Ray actor for hard filters?](#why-ray-actor-for-hard-filters)
+		- [Why soft filters as Ray tasks?](#why-soft-filters-as-ray-tasks)
+		- [Why Ray?](#why-ray)
+		- [Why not Dockerize?](#why-not-dockerize)
 	- [Results Snapshot](#results-snapshot)
-		- [Whisper Tiny model report](#whisper-tiny-model-report)
-		- [Whisper Medium model report](#whisper-medium-model-report)
+		- [Whisper Tiny model report (batch size = 5)](#whisper-tiny-model-report-batch-size--5)
+		- [Whisper Medium model report (batch size = 5)](#whisper-medium-model-report-batch-size--5)
 		- [Observation: Gujarati false rejection example](#observation-gujarati-false-rejection-example)
 		- [Tiny vs Medium vs Large-v2 note](#tiny-vs-medium-vs-large-v2-note)
+	- [Visual Analysis](#visual-analysis)
+		- [Metric Distribution](#metric-distribution)
+		- [Metrics Correlation Heatmap](#metrics-correlation-heatmap)
+		- [Retention Curve](#retention-curve)
+		- [Rejection Breakdown](#rejection-breakdown)
 	- [Human-in-the-Loop Review Dashboard](#human-in-the-loop-review-dashboard)
 		- [Features](#features)
 		- [Run dashboard](#run-dashboard)
@@ -50,10 +59,8 @@
 	- [How to Extend the Pipeline](#how-to-extend-the-pipeline)
 		- [Plug another dataset](#plug-another-dataset)
 		- [Scale to larger workloads](#scale-to-larger-workloads)
-	- [Design Decisions and Engineering Notes](#design-decisions-and-engineering-notes)
+	- [Key Findings](#key-findings)
 	- [Limitations and Future Improvements](#limitations-and-future-improvements)
-	- [Reproducibility Notes](#reproducibility-notes)
-	- [Documentation Quality Checklist](#documentation-quality-checklist)
 	- [References](#references)
 
 ---
@@ -175,7 +182,7 @@ Current default input and output:
 ## System Architecture
 
 The pipeline follows a distributed architecture revolving around the Ray framework. The main part is the Ray Cluster with all the resource pool that each Task or Actor depends upon. The program flow is as follows:</br>
-1. The raw IndicVoice corpus is ingested and streamed batch by batch using pytorch `IterableDataset` after canonicalizing them to single-channel 16kHz (format most models prefer). This makes sure that the entire dataset is not loaded onto the memory at once, ensuring **reduced memory consumption**.
+1. The raw IndicVoices corpus is ingested and streamed batch by batch using pytorch `IterableDataset` after canonicalizing them to single-channel 16kHz (format most models prefer). This makes sure that the entire dataset is not loaded onto the memory at once, ensuring **reduced memory consumption**.
 2. Each sample in a batch is assigned to an independent **Ray Task** which is a stateless worker that runs the soft filters (low consumption) on the same.  
 3. After all the samples in the batch are processed, they are then passed to **Ray Actors** which are stateful workers that runs the hard filters. They will retain memory and this helps us to reuse the same model instance acrossed batches instead of initializing it repeatedly for each batch.
 4. Then all the metrics are aggregated and passed to Rule engine which decides whether to pass the audio or not. Outputs are then written onto a `.jsonl` file.
@@ -241,7 +248,7 @@ Architecture Diagram:
   - High silence ratio leads to:
 	- low information density
 	- inefficient training (wasted compute on silence)
-- Threshold was choosen in such a way that if the audio has more than 50% silence (0.5), then discard it.
+- Threshold was chosen in such a way that if the audio has more than 50% silence (0.5), then discard it.
 
 ---
 
@@ -288,7 +295,7 @@ Architecture Diagram:
 	- unreliable transcripts
 	- potential labeling errors
 - Threshold was chosen heuristically. I knowingly kept the threshold low to be a bit more lenient with filtering.
-- `whisper` was not trained on 8 specific languages which are available in `IndicVoice` dataset, so for those languages, I ignored ASR confidence.
+- `whisper` was not trained on 8 specific languages which are available in `IndicVoices` dataset, so for those languages, I ignored ASR confidence.
 - The `IndicConformer-600m-multilingual` model could have been used to compute `WER` and `CER` instead, but this was not feasible due to resource constraints. It also supports the other 8 langs that `whisper` doesnt.
 
 ---
@@ -301,7 +308,7 @@ Architecture Diagram:
 		- mislabeled samples
 		- code-mixed or unexpected language segments
 		- noisy predictions due to poor audio quality
-- `whisper` was not trained on 8 specific languages which are available in `IndicVoice` dataset, so for those languages, I ignored LID prediction.
+- `whisper` was not trained on 8 specific languages which are available in `IndicVoices` dataset, so for those languages, I ignored LID prediction.
 - There was also a case where a very clear Gujarati Audio (**0.957 ASR Confidence**) was rejected due to `whisper` misinterpreting it as Hindi.
   
 	<audio controls>
@@ -310,7 +317,7 @@ Architecture Diagram:
 	</audio>
 - I found this case while reviewing the filtered output through the reviewer dashboard (run `make dashboard`)
 - Another case was were the speaker was using english words (**code-mixing**) and the model predicted it as english.
-- Cases like these show that even though models are very good at what they do, a human-in-the-loop setup will always be benefitial to catch edge cases.
+- Cases like these show that even though models are very good at what they do, a human-in-the-loop setup will always be beneficial to catch edge cases.
 
 ---
 
@@ -327,8 +334,7 @@ Architecture Diagram:
 	- technically passes all checks
 	- but still sounds bad to humans
 - [IndicVoices-R](https://arxiv.org/html/2409.05356#:~:text=Audio%20We,data) uses NORESQA-MOS and random samples from LibriTTS, but I could not set it up due to dependency conflicts with other models.
-- The sample passes NISQA gate if at least **4 out of 5** perceptual metrics pass their minimum thresholds.
-This was done to make the filtering a bit lenient.
+- The sample passes NISQA gate if at least **4 out of 5** perceptual metrics pass their minimum thresholds. This was purely a design choice and was done as I found out that these 5 metrics were highly correlated with one another [correlation-matrix](##plot).
 - For thresholds I refered [ankandrew/nisqa-v2.0](https://huggingface.co/spaces/ankandrew/nisqa-v2.0)
 - I kept the threshold lower from what is used in the above reference so as to be more lenient with filtering (as I am using around 10 filters in total).
 
@@ -363,7 +369,7 @@ The active decision thresholds are from `thresholds.json`.
 - Whisper tiny was chosen for simplicity and resource constraints, with known limitations for Indic language coverage.
 - If resources available, I would use `IndicConformer-600m-multilingual` for `WER` and `CER` calculation and `IndicLID` for language detection.
 
-- Whisper does not support the following languages:
+- Whisper does not reliably support the following languages (not explicitly trained), and misclassifies them:
 
 	- `brx` (Bodo)
 	- `doi` (Dogri)
@@ -413,6 +419,10 @@ Pipeline was not dockerized for this submission. Containerizing distributed Ray 
 
 ![Whisper Medium Results](images/whisper_medium_results.png)
 
+### Demo Run
+- Here is a demo run video of me running the pipeline, monitoring the ray runtime and finally reviewing the final output through the dashboard. **The video is sped up by 2x to reduce size**
+<video controls src="images/output.mp4" title="Demo Video">If this video doesnt play, go to images/output.mp4</video>
+
 ### Observation: Gujarati false rejection example
 
 A clear Gujarati clip with high ASR confidence (`~0.957`) was rejected because predicted language was Hindi and C50 was below threshold.
@@ -424,6 +434,29 @@ This failure mode motivates stronger Indic-specific LID/ASR.
 - Tiny and Medium visual results are included above.
 - Large-v2 was not run in this submission due to resource/time constraints.
 - Expected trend: better multilingual robustness with larger models, at the cost of latency and memory.
+
+---
+
+## Visual Analysis
+
+### Metric Distribution
+- This graph shows the distribution of key metric values across the dataset.
+![metric-dist](images/metric-dist.png)
+
+### Metrics Correlation Heatmap
+- This graph shows the correlation between the filtering metrics.
+- The five NISQA-MOS metrics — MOS, noisiness, discontinuity, coloration, and loudness — are highly correlated. This supports the use of a relaxed gating rule rather than requiring all of them to pass strictly.
+- The heatmap also shows that the other metrics are only weakly correlated, which suggests that they capture complementary aspects of audio quality.
+![corr-map](images/corr-map.png)
+
+### Retention Curve
+- This graph shows the proportion of samples that would be retained at different levels of quality threshold, using a combined score derived from the filtering criteria.
+![ret-curve](images/ret-curve.png)
+
+### Rejection Breakdown
+- This graph shows the number of samples rejected by each metric.
+- Note that a sample can be rejected for multiple reasons.
+![rej-bdown](images/rej-bdown.png)
 
 ---
 
@@ -500,23 +533,36 @@ Example output file: `output/filtered_manifest.jsonl`
 
 ---
 
+## Key Findings
+
+1. Approximately **50% of the 220 evaluated samples** were rejected by the filtering pipeline.
+2. The primary causes of rejection were **language misidentification** and **low NISQA-MOS scores**.
+3. High rejection rates from NISQA-MOS are consistent with the dataset being **real-world recorded audio**, which naturally contains noise, distortions, and variability in recording conditions.
+4. Language misidentification was significantly reduced by using a stronger ASR model. 
+   Switching from `whisper-tiny` to `whisper-medium` reduced misclassifications from **102 to 72 samples (out of 220)**. 
+   Further improvements are expected with Indic-specific models such as `IndicLID`.
+5. With 5 Ray Tasks running in parallel, the pipeline processed 5 samples in approximately 1–1.5 seconds, demonstrating efficient parallel execution. This throughput can be further improved by increasing the number of parallel tasks based on available compute resources.
+6. The Ray framework proved to be well-suited for this pipeline due to its **scalability, ease of parallelization, and minimal orchestration overhead**.
+
+---
+
 ## Limitations and Future Improvements
 
 1. Replace Whisper tiny with stronger Indic-capable ASR + explicit WER/CER.
 2. Replace LID proxy with dedicated Indic LID model.
 3. Replace NISQA-MOS with NORESQA-MOS.
+4. Train an XGBoost model on the manual reviews and status changes made on the samples after filtering. This will help to identify possible unnecessary patterns the pipeline is learning. 
 
 ---
 
-- As part of the some research work I did for this project, I found a type in the `torchmetrics` repo and opened a PR for it. [PR](https://github.com/Lightning-AI/torchmetrics/pull/3357)
+- While working on this project, I discovered and fixed a typo in the `torchmetrics` repository by submitting a pull request. [PR](https://github.com/Lightning-AI/torchmetrics/pull/3357)
 
 ## References
-- https://github.com/NVIDIA/NeMo-speech-data-processor/blob/main/sdp/processors/tts/metrics.py
-- https://huggingface.co/spaces/ankandrew/nisqa-v2.0/blob/main/app.py
 - [IndicVoices-R](https://arxiv.org/html/2409.05356)
+- https://github.com/huggingface/dataspeech
+- https://www.ray.io/
+- https://huggingface.co/spaces/ankandrew/nisqa-v2.0/blob/main/app.py
 - https://huggingface.co/pyannote/brouhaha
-
-
 
 ---
 <h3 align="center">Thank you </h3>
