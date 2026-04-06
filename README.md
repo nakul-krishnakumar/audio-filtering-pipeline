@@ -184,10 +184,10 @@ Current default input and output:
 The pipeline follows a distributed architecture revolving around the Ray framework. The main part is the Ray Cluster with all the resource pool that each Task or Actor depends upon. The program flow is as follows:</br>
 1. The raw IndicVoices corpus is ingested and streamed batch by batch using pytorch `IterableDataset` after canonicalizing them to single-channel 16kHz (format most models prefer). This makes sure that the entire dataset is not loaded onto the memory at once, ensuring **reduced memory consumption**.
 2. Each sample in a batch is assigned to an independent **Ray Task** which is a stateless worker that runs the soft filters (low consumption) on the same.  
-3. After all the samples in the batch are processed, they are then passed to **Ray Actors** which are stateful workers that runs the hard filters. They will retain memory and this helps us to reuse the same model instance acrossed batches instead of initializing it repeatedly for each batch.
+3. After all the samples in the batch are processed, they are then passed to **Ray Actors** which are stateful workers that runs the hard filters. They will retain memory and this helps us to reuse the same model instance across batches instead of initializing it repeatedly for each batch.
 4. Then all the metrics are aggregated and passed to Rule engine which decides whether to pass the audio or not. Outputs are then written onto a `.jsonl` file.
-5. Then the next batch starts the loop.
-6. The final output can be then reviewed through the reviewer dashboard (run `make dashboard`)
+5. The next batch is passed on to the loop.
+6. The final output can be then reviewed through the reviewer dashboard (run `make dashboard`).
 
 Architecture Diagram:
 ![System Architecture](images/sys_arch.svg)
@@ -281,7 +281,7 @@ Architecture Diagram:
 
 ---
 
-7. **ASR Confidence (Whisper avg logprob)**
+1. **ASR Confidence**
 - This function measures the average log probability of the transcribed tokens from an ASR model (here we use `whisper`), used to find transcription confidence.
 - **High** ⇒ Good (model is confident about the transcription)
 - **Low** ⇒ Bad (uncertain / poor-quality audio)
@@ -313,7 +313,7 @@ Architecture Diagram:
   
 	<audio controls>
 	<source src="input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac" type="audio/flac">
-	Go here: data/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac
+	[Play audio](input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac)
 	</audio>
 - I found this case while reviewing the filtered output through the reviewer dashboard (run `make dashboard`)
 - Another case was were the speaker was using english words (**code-mixing**) and the model predicted it as english.
