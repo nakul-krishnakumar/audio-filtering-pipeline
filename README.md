@@ -312,7 +312,7 @@ Architecture Diagram:
 - There was also a case where a very clear Gujarati Audio (**0.957 ASR Confidence**) was rejected due to `whisper` misinterpreting it as Hindi.
   
 	<audio controls>
-	<source src="data/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac" type="audio/flac">
+	<source src="input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac" type="audio/flac">
 	Go here: data/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac
 	</audio>
 - I found this case while reviewing the filtered output through the reviewer dashboard (run `make dashboard`)
@@ -334,7 +334,7 @@ Architecture Diagram:
 	- technically passes all checks
 	- but still sounds bad to humans
 - [IndicVoices-R](https://arxiv.org/html/2409.05356#:~:text=Audio%20We,data) uses NORESQA-MOS and random samples from LibriTTS, but I could not set it up due to dependency conflicts with other models.
-- The sample passes NISQA gate if at least **4 out of 5** perceptual metrics pass their minimum thresholds. This was purely a design choice and was done as I found out that these 5 metrics were highly correlated with one another [correlation-matrix](##plot).
+- The sample passes NISQA gate if at least **4 out of 5** perceptual metrics pass their minimum thresholds. This was purely a design choice and was done as I found out that these 5 metrics were highly correlated with one another [correlation-matrix](#metrics-correlation-heatmap).
 - For thresholds I refered [ankandrew/nisqa-v2.0](https://huggingface.co/spaces/ankandrew/nisqa-v2.0)
 - I kept the threshold lower from what is used in the above reference so as to be more lenient with filtering (as I am using around 10 filters in total).
 
