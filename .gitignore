@@ -18,4 +18,4 @@ data/*
 # Secrets
 .env
 
-/input/audio/*
+input/audios
