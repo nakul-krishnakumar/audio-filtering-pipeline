@@ -120,7 +120,7 @@ HF_TOKEN="<fine-grained-token>"
 
 I have added the test sample audios along with the submission, if it doesn't exist or not usable, run the following:
 ```bash
-make download
+make download DIR=<DOWNLOAD_DIR>
 ```
 
 
