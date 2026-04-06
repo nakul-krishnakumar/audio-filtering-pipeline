@@ -310,11 +310,12 @@ Architecture Diagram:
 		- noisy predictions due to poor audio quality
 - `whisper` was not trained on 8 specific languages which are available in `IndicVoices` dataset, so for those languages, I ignored LID prediction.
 - There was also a case where a very clear Gujarati Audio (**0.957 ASR Confidence**) was rejected due to `whisper` misinterpreting it as Hindi.
-  
+	
 	<audio controls>
 	<source src="input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac" type="audio/flac">
-	[Play audio](input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac)
 	</audio>
+	
+	If audio player did not work, click here: [Play audio](input/audios/gujarati/valid-00000-of-00001/3377699720681139_chunk_1.flac)
 - I found this case while reviewing the filtered output through the reviewer dashboard (run `make dashboard`)
 - Another case was were the speaker was using english words (**code-mixing**) and the model predicted it as english.
 - Cases like these show that even though models are very good at what they do, a human-in-the-loop setup will always be beneficial to catch edge cases.
