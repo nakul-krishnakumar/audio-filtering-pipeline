@@ -152,7 +152,7 @@
         .pagination a:hover { background: #f0f0f0; }
         .pagination .current { background: #007bff; color: white; border-color: #007bff; }
         .pagination .disabled { color: #ccc; pointer-events: none; }
-        .filename { max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+        .filename { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
         .num { text-align: right; }
         .toast {
             position: fixed;
@@ -237,7 +237,7 @@
                 {% for sample in samples %}
                 <tr>
                     <td>{{ sample._idx + 1 }}</td>
-                    <td class="filename" title="{{ sample.audio_filepath }}">{{ sample._filename }}</td>
+                    <td class="filename" title="{{ sample.audio_filepath }}">{{ sample.audio_filepath }}</td>
                     <td>
                         <audio controls preload="none" src="/audio/{{ sample._idx }}"></audio>
                     </td>
