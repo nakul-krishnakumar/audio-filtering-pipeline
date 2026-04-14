@@ -71,15 +71,19 @@ class AudioFilterer:
 	def calc_silence_ratio(self, norm_waveform: torch.Tensor) -> float:
 		flat_waveform = norm_waveform.reshape(-1)
 		num_frames = flat_waveform.numel() // self.config["frame_length"]
+		# frame_length is 1024, which is a standard constant used in fft
+		# also it is a power of 2, so fft computation is faster over it
+		# also silence ratio is meanling across chunks and not on a full sample
 		if num_frames == 0:
 			return 1.0
-		else:
-			frames = flat_waveform[: num_frames * self.config["frame_length"] ].reshape(
-				num_frames, self.config["frame_length"]
-			)
-			frame_power = (frames ** 2).mean(dim=1)
-			threshold = 10 ** (self.config["silence_threshold_db"] / 10.0)
-			return (frame_power < threshold).float().mean().item()
+		frames = flat_waveform[: num_frames * self.config["frame_length"] ].reshape(
+			num_frames, self.config["frame_length"]
+		)
+		frame_power = (frames ** 2).mean(dim=1) # averaging energy of each frame
+
+		# convert threshold from dB to linear power ratio
+		threshold = 10 ** (self.config["silence_threshold_db"] / 10.0)
+		return (frame_power < threshold).float().mean().item()
 	
 	def calc_asr_confidence(self, audio_path) -> tuple[float, str]:
 		result = self.asr_model.transcribe(audio_path, temperature=0)
@@ -164,6 +168,19 @@ def soft_filter_task(sample: AudioSample):
 
 	result = filterer.compute_soft(sample)
 	return {"sample": sample, "soft_metrics": result, "_ray": identity}
+
+@ray.remote(num_cpus=1)
+def batch_soft_filter_task(samples: list[AudioSample]):
+	logger = Logger("soft_filter")
+	filterer = AudioFilterer(logger=logger, hf_token=None)
+	identity = _runtime_identity()
+
+	results = []
+	for sample in samples:
+		result = filterer.compute_soft(sample)
+		results.append({"sample": sample, "soft_metrics": result})
+	return { "results": results, "_ray": identity }
+
 
 """
 Why ray actor for HardFilters but not for SoftFilters?

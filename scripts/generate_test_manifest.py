@@ -7,7 +7,7 @@ def generate_manifest(
     root_dir: str,
     output_file: str,
     audio_output_dir: str = "./input/audios",
-    max_lines_per_file: int = 500,
+    max_samples_per_file: int = 500,
 ) -> None:
     root = Path(root_dir)
     output_path = Path(output_file)
@@ -45,8 +45,9 @@ def generate_manifest(
 
             json_file = json_files[0]
             with json_file.open("r", encoding="utf-8") as f:
+                written_for_file = 0
                 for i, line in enumerate(f):
-                    if i >= max_lines_per_file:
+                    if written_for_file >= max_samples_per_file:
                         break
 
                     try:
@@ -77,6 +78,7 @@ def generate_manifest(
                     entry["audio_filepath"] = f"./{target_audio.as_posix().lstrip('./')}"
                     out_f.write(json.dumps(entry, ensure_ascii=False) + "\n")
                     total_written += 1
+                    written_for_file += 1
 
     print(f"\nDone. Total lines written: {total_written}")
     print(f"Audio files moved to {audio_output_path}: {total_moved}")
@@ -87,5 +89,5 @@ if __name__ == "__main__":
         root_dir="./data/manifests",
         output_file="./input/test_manifest.jsonl",
         audio_output_dir="./input/audios",
-        max_lines_per_file=10,
+        max_samples_per_file=10,
     )

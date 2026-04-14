@@ -27,6 +27,13 @@ UNSUPPORTED_LANGS = [
 with open("thresholds.json", "r", encoding="utf-8") as f:
     cfg = json.load(f)
 
+# Why a custom collate function?
+# - Each audio sample has different shaped tensors, [1, num_samples]
+# - where the num_samples depend on sampling rate (16kHz fixed here) and the 
+# 	size of the audio which may vary
+# - DataLoader will internally try to stack each tensor [2, 1, x]
+# - But in out case the `x` is varying across audio samples and this stacking will break
+# - So we make a custom collate function to directly pass the batch instead of stacking it
 def collate_fn(batch):
     return batch
 
@@ -86,6 +93,7 @@ def run_pipeline(
 			for idx, batch in enumerate(dataIterator):
 				start = time.time()
 				soft_futures = [soft_filter_task.remote(sample) for sample in batch]
+				# Futures are ray object references, which will produce a result later
 
 				soft_outputs = [s for s in ray.get(soft_futures) if s is not None]
 

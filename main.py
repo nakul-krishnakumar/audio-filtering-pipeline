@@ -6,7 +6,7 @@ def main():
         manifest_path = "./input/test_manifest.jsonl",
         output_dir= "./output",
 		target_sr = 16000,
-        batch_size = 5,
+        batch_size = 10,
         num_data_loader_workers = 8,
         debug_workers=True
 	)
