@@ -4,7 +4,7 @@
 
 <!-- ### Sarvam TTS Assignment Submission -->
 
-**Submitted by:** Nakul Krishnakumar  
+**Author:** Nakul Krishnakumar  
 **Email:** nakulkrishnakumar@gmail.com  
 **Profiles:** [LinkedIn](https://www.linkedin.com/in/nakul-krishnakumar-9aa951282/) | [GitHub](https://github.com/nakul-krishnakumar) | [Website](https://www.nakulkrishnakumar.live/)
 
