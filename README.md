@@ -2,7 +2,7 @@
 
 # Audio Filtering Pipeline for Indic TTS Data
 
-### Sarvam TTS Assignment Submission
+<!-- ### Sarvam TTS Assignment Submission -->
 
 **Submitted by:** Nakul Krishnakumar  
 **Email:** nakulkrishnakumar@gmail.com  
@@ -15,7 +15,7 @@
 ## Table of Contents
 
 - [Audio Filtering Pipeline for Indic TTS Data](#audio-filtering-pipeline-for-indic-tts-data)
-		- [Sarvam TTS Assignment Submission](#sarvam-tts-assignment-submission)
+		<!-- - [Sarvam TTS Assignment Submission](#sarvam-tts-assignment-submission) -->
 	- [Table of Contents](#table-of-contents)
 	- [Project Overview](#project-overview)
 	- [Setup and Installation](#setup-and-installation)
@@ -103,8 +103,8 @@ This runs:
 
 Required for `pyannote/brouhaha` with gated access.
 
->[!NOTE]
-> I have added a personal fine-grained token with gated access support in this pipeline so it should work, if it doesn't, please do the following and login with a token with respective access.
+<!-- >[!NOTE]
+> I have added a personal fine-grained token with gated access support in this pipeline so it should work, if it doesn't, please do the following and login with a token with respective access. -->
 
 ```bash
 uv run hf auth login
@@ -118,7 +118,7 @@ HF_TOKEN="<fine-grained-token>"
 
 ### Download Sample Audios (Optional)
 
-I have added the test sample audios along with the submission, if it doesn't exist or not usable, run the following:
+<!-- I have added the test sample audios along with the submission, if it doesn't exist or not usable, run the following: -->
 ```bash
 make download DIR=<OUTPUT_DIR>
 ```
@@ -404,9 +404,9 @@ Soft metrics are lightweight and stateless, so task-level fanout is sufficient.
 - To scale distributively, we can add more worker nodes to the Ray cluster, increasing resource pool.
 - I tested Ray cluster connectivity by deploying a worker node on another laptop and connecting it to my head node.
 
-### Why not Dockerize?
+<!-- ### Why not Dockerize?
 
-Pipeline was not dockerized for this submission. Containerizing distributed Ray workflows is possible, but requires careful handling of networking and port mapping across head/worker nodes, so I avoided it for the time being.
+Pipeline was not dockerized for this submission. Containerizing distributed Ray workflows is possible, but requires careful handling of networking and port mapping across head/worker nodes, so I avoided it for the time being. -->
 
 ---
 
@@ -517,7 +517,25 @@ Generated fields include:
 Example output file: `output/filtered_manifest.jsonl`
 
 ```json
-{"audio_filepath": "/home/nakul/devfiles/PROJECTS/audio-filter/data/audios/bengali/valid-00000-of-00001/1407374883619853_chunk_6.flac", "duration": 8.704, "clipping_ratio": 0.0, "silence_ratio": 0.07352941483259201, "asr": 0.9485736390894858, "mos": 2.9333860874176025, "noisiness": 2.990189790725708, "discontinuity": 4.400715351104736, "coloration": 3.8577053546905518, "loudness": 4.275895118713379, "pred_lang": "bn", "expected_lang": "bn", "vad_ratio": 0.9961240310077519, "snr": 44.512290954589844, "c50": 54.885292053222656, "status": "Accept", "reject_due_to": []}
+{
+	"audio_filepath": "/home/nakul/devfiles/PROJECTS/audio-filter/data/audios/bengali/valid-00000-of-00001/1407374883619853_chunk_6.flac", 
+	"duration": 8.704, 
+	"clipping_ratio": 0.0,
+	"silence_ratio": 0.07352941483259201, 
+	"asr": 0.9485736390894858, 
+	"mos": 2.9333860874176025, 
+	"noisiness": 2.990189790725708, 
+	"discontinuity": 4.400715351104736, 
+	"coloration": 3.8577053546905518, 
+	"loudness": 4.275895118713379,
+	"pred_lang": "bn",
+	"expected_lang": "bn",
+	"vad_ratio": 0.9961240310077519,
+	"snr": 44.512290954589844,
+	"c50": 54.885292053222656,
+	"status": "Accept", 
+	"reject_due_to": []
+}
 ```
 
 ---
@@ -559,8 +577,8 @@ Example output file: `output/filtered_manifest.jsonl`
 3. Replace NISQA-MOS with NORESQA-MOS.
 
 ---
-
-- While working on this project, I discovered and fixed a typo in the `torchmetrics` repository by submitting a pull request. [PR](https://github.com/Lightning-AI/torchmetrics/pull/3357)
+<!-- 
+- While working on this project, I discovered and fixed a typo in the `torchmetrics` repository by submitting a pull request. [PR](https://github.com/Lightning-AI/torchmetrics/pull/3357) -->
 
 ## References
 - [IndicVoices-R](https://arxiv.org/html/2409.05356)
@@ -569,5 +587,5 @@ Example output file: `output/filtered_manifest.jsonl`
 - https://huggingface.co/spaces/ankandrew/nisqa-v2.0/blob/main/app.py
 - https://huggingface.co/pyannote/brouhaha
 
----
-<h3 align="center">Thank you </h3>
+<!-- ---
+<h3 align="center">Thank you </h3> -->
