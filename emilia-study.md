@@ -84,31 +84,34 @@ The pipeline consists of six sequential stages:
   - Speaker overlap flagged segments
 - Implemented this in my assignment, added near boundary check filters.
 
+![dashboard](images/dashboard.png)
+
 ---
 
 ## 5. Optimization & Parallelization Approaches
 
 
 1. **Batch audio loading to reduce I/O overhead**
-   - This reduces repeated read overhead and helps keep the CPU and GPU better utilized. 
+   <br>This reduces repeated read overhead and helps keep the CPU and GPU better utilized. 
+   <br>Also the model used for source separation (UVR MDX Net Inst) supports batch processing but we do not utilize it. This can be utilized by batching audio samples.
 
-2. **Separate preprocessing from filtering**
-   The current approach appears to batch processing around VAD segments, which can become inefficient when many files contain few or no useful segments. To scale better, preprocessing should be split into distinct stages: first detect and segment speech, then filter and score those segments independently. This allows each stage to be optimized separately and prevents the entire pipeline from waiting on a slow or sparse input file.
+1. **Separate preprocessing from filtering**
+   <br>The current approach appears to batch processing around VAD segments, which can become inefficient when many files contain few or no useful segments. To scale better, preprocessing should be split into distinct stages: first detect and segment speech, then filter and score those segments independently. This allows each stage to be optimized separately and prevents the entire pipeline from waiting on a slow or sparse input file.
 
-3. **Move from vertical scaling to horizontal scaling**
-   A single-machine design can only scale up to a point. For millions of hours of data, the pipeline should be able to scale across multiple machines in a distributed cluster. This would improve throughput and also make the system more fault tolerant: if one worker fails, only a portion of the workload is affected instead of the entire pipeline.
+2. **Move from vertical scaling to horizontal scaling**
+   <br>A single-machine design can only scale up to a point. For millions of hours of data, the pipeline should be able to scale across multiple machines in a distributed cluster. This would improve throughput and also make the system more fault tolerant: if one worker fails, only a portion of the workload is affected instead of the entire pipeline.
    <br>**Implemented this in my assignment using Ray Cluster.**
 
-4. **Introduce proper data sharding and worker partitioning**
-   For large-scale processing, each worker must receive a unique shard of the dataset. Without explicit sharding, multiple workers may end up processing the same input path, wasting compute and creating redundant work. A proper distributed design should divide the dataset into non-overlapping chunks so that workers operate independently and efficiently.
+3. **Introduce proper data sharding and worker partitioning**
+   <br>For large-scale processing, each worker must receive a unique shard of the dataset. Without explicit sharding, multiple workers may end up processing the same input path, wasting compute and creating redundant work. A proper distributed design should divide the dataset into non-overlapping chunks so that workers operate independently and efficiently.
 
-5. **Add an early filtering gate using VAD and quality heuristics**
-   Before running expensive ASR or downstream filtering, the pipeline should use a lightweight front-end gate such as VAD, silence ratio checks, and basic audio-quality heuristics. This reduces unnecessary computation on empty, silent, or obviously low-quality inputs. Such early rejection is especially valuable at scale because even small savings per file add up significantly over millions of hours.
+4. **Add an early filtering gate using VAD and quality heuristics**
+   <br>Before running expensive ASR or downstream filtering, the pipeline should use a lightweight front-end gate such as VAD, silence ratio checks, and basic audio-quality heuristics. This reduces unnecessary computation on empty, silent, or obviously low-quality inputs. Such early rejection is especially valuable at scale because even small savings per file add up significantly over millions of hours.
 
-6. **Distributed fault tolerance**
+5. **Distributed fault tolerance**
 
-7. **Support language-specific adaptation in the filtering stack**
-   If the target data includes multilingual or Indic speech, the ASR and evaluation components should be adapted accordingly. A scalable pipeline should not assume one fixed language set or one universal normalization strategy. Language-aware processing improves data quality and prevents unnecessary rejection of valid samples.
+6. **Support language-specific adaptation in the filtering stack**
+   <br>If the target data includes multilingual or Indic speech, the ASR and evaluation components should be adapted accordingly. A scalable pipeline should not assume one fixed language set or one universal normalization strategy. Language-aware processing improves data quality and prevents unnecessary rejection of valid samples.
 
 ### 5.2 Proposed Improvements
 
@@ -134,4 +137,5 @@ Proposed: CPU → Load batch → Process batch → Save batch → CPU
 
 - In my assignment, I rejected a sample if its SNR ratio or VAD ratio went below threshold, but did not consider the fact that the sample can be segmented and good segments can be used.
 - Real World data is not ready for use and requires heavy preprocessing.
-- 
+
+---
