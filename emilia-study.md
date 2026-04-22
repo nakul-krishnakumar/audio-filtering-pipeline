@@ -108,9 +108,7 @@ The pipeline consists of six sequential stages:
 4. **Add an early filtering gate using VAD and quality heuristics**
    <br>Before running expensive ASR or downstream filtering, the pipeline should use a lightweight front-end gate such as VAD, silence ratio checks, and basic audio-quality heuristics. This reduces unnecessary computation on empty, silent, or obviously low-quality inputs. Such early rejection is especially valuable at scale because even small savings per file add up significantly over millions of hours.
 
-5. **Distributed fault tolerance**
-
-6. **Support language-specific adaptation in the filtering stack**
+5. **Support language-specific adaptation in the filtering stack**
    <br>If the target data includes multilingual or Indic speech, the ASR and evaluation components should be adapted accordingly. A scalable pipeline should not assume one fixed language set or one universal normalization strategy. Language-aware processing improves data quality and prevents unnecessary rejection of valid samples.
 
 ### Proposed Improvements
