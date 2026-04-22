@@ -8,7 +8,7 @@
 
 Emilia-Pipe is an open-source preprocessing pipeline designed to transform raw, **in-the-wild** speech data into high-quality training data for speech generation models. It processes multilingual speech data in (En, Zh, De, Fr, Ja, Ko), and produced over 216k hours of training data in Emilia-Large.
 
-- Specifically for audio samples in the language **English, Chinese, German, French, Japanese or Korean** 
+- Specifically for audio samples in the language **English, Chinese, German, French, Japanese and Korean** 
 
 - Their main source of data was **in-the-wild** speech samples sourced from a vast collection of video and podcast platforms on the Internet.
 
