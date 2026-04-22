@@ -113,7 +113,7 @@ The pipeline consists of six sequential stages:
 6. **Support language-specific adaptation in the filtering stack**
    <br>If the target data includes multilingual or Indic speech, the ASR and evaluation components should be adapted accordingly. A scalable pipeline should not assume one fixed language set or one universal normalization strategy. Language-aware processing improves data quality and prevents unnecessary rejection of valid samples.
 
-### 5.2 Proposed Improvements
+### Proposed Improvements
 
 **I/O Optimization (Batch Loading)**:
 ```
